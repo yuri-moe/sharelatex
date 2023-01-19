@@ -20,4 +20,4 @@ jobs:
       - name: Prepare Environment
         run: |
           echo REVERSION=`git -C overleaf rev-parse --short HEAD` >> $GITHUB_ENV
-          echo ${{ env }}
+          echo ${{ env.REVERSION }}
