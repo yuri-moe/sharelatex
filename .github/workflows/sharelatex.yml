@@ -13,12 +13,80 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       
-      - name: Clone and reset to specific commit
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          
+      - name: Clone
         run: |
           git clone https://github.com/overleaf/overleaf.git
           
       - name: Prepare Environment
-        run: echo "SHARELATEX_VERSION=$(git -C overleaf rev-parse HEAD)" >> $GITHUB_ENV
-        
-      - name: Test
-        run: echo ${{ env.SHARELATEX_VERSION }}
+        run: |
+          echo "SHARELATEX_VERSION=$(git -C overleaf rev-parse HEAD)" >> $GITHUB_ENV
+          echo "SHARELATEX_VERSION_SHORT=$(git -C overleaf rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Build and push sharelatex-base
+        uses: docker/build-push-action@v3
+        with:
+          context: ./overleaf
+          file: ./overleaf/server-ce/Dockerfile-base
+          platforms: |
+            linux/amd64
+            linux/arm64
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_NS }}/sharelatex-base:${{ env.SHARELATEX_VERSION_SHORT }}
+            ${{ secrets.DOCKER_NS }}/sharelatex-base:latest
+
+  sharelatex:
+    needs: sharelatex-base
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          
+      - name: Clone
+        run: |
+          git clone https://github.com/overleaf/overleaf.git
+          
+      - name: Prepare Environment
+        run: |
+          echo "SHARELATEX_VERSION=$(git -C overleaf rev-parse HEAD)" >> $GITHUB_ENV
+          echo "SHARELATEX_VERSION_SHORT=$(git -C overleaf rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Build and push sharelatex
+        uses: docker/build-push-action@v3
+        with:
+          context: ./overleaf
+          file: ./overleaf/server-ce/Dockerfile
+          platforms: |
+            linux/amd64
+            linux/arm64
+          push: true
+          build-args: |
+            SHARELATEX_BASE_TAG=${{ secrets.DOCKER_NS }}/sharelatex-base
+            MONOREPO_REVISION=${{ env.SHARELATEX_VERSION }}
+          tags: |
+            ${{ secrets.DOCKER_NS }}/sharelatex:${{ env.SHARELATEX_VERSION_SHORT }}
+            ${{ secrets.DOCKER_NS }}/sharelatex:latest
