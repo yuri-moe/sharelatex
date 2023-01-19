@@ -19,5 +19,5 @@ jobs:
           
       - name: Prepare Environment
         run: |
-          echo "REVERSION=$(git -C overleaf rev-parse HEAD)" >> $GITHUB_ENV
-          echo $REVERSION
+          echo "SHARELATEX_VERSION=$(git -C overleaf rev-parse HEAD)" >> $GITHUB_ENV
+          echo ${{ env.SHARELATEX_VERSION }}
